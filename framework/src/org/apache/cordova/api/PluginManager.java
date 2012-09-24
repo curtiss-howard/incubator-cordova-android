@@ -219,8 +219,8 @@ public class PluginManager {
         PluginResult cr = null;
         boolean runAsync = async;
         try {
-            final JSONArray args = new JSONArray(jsonArgs);
             final IPlugin plugin = this.getPlugin(service);
+            final boolean isRawPlugin = (plugin instanceof IRawPlugin); 
             //final CordovaInterface ctx = this.ctx;
             if (plugin != null) {
                 runAsync = async && !plugin.isSynch(action);
@@ -229,8 +229,13 @@ public class PluginManager {
                     execThreadPool.execute(new Runnable() {
                         public void run() {
                             try {
+                            	PluginResult cr;
                                 // Call execute on the plugin so that it can do it's thing
-                                PluginResult cr = plugin.execute(action, args, callbackId);
+                            	if (isRawPlugin) {
+                            		cr = ((IRawPlugin) plugin).execute(action, jsonArgs, callbackId);
+                            	} else {
+                                	cr = plugin.execute(action, new JSONArray(jsonArgs), callbackId);
+                                }
                                 app.sendPluginResult(cr, callbackId);
                             } catch (Exception e) {
                                 PluginResult cr = new PluginResult(PluginResult.Status.ERROR, e.getMessage());
@@ -241,7 +246,11 @@ public class PluginManager {
                     return false;
                 } else {
                     // Call execute on the plugin so that it can do it's thing
-                    cr = plugin.execute(action, args, callbackId);
+                	if (isRawPlugin) {
+                		cr = ((IRawPlugin) plugin).execute(action, jsonArgs, callbackId);
+                	} else {
+                    	cr = plugin.execute(action, new JSONArray(jsonArgs), callbackId);
+                    }
 
                     // If no result to be sent and keeping callback, then no need to sent back to JavaScript
                     if ((cr.getStatus() == PluginResult.Status.NO_RESULT.ordinal()) && cr.getKeepCallback()) {
